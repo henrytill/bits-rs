@@ -1,0 +1,50 @@
+// -*- mode: prog; tab-width: 4; -*-
+use std::str::FromStr;
+
+use crate::syntax::Expr;
+
+grammar;
+
+pub Expr: Box<Expr> = {
+    <e:Expr> <op:ExprOp> <t:Term> => match op {
+        "+" => Box::new(Expr::Add(e, t)),
+        "-" => Box::new(Expr::Sub(e, t)),
+        _ => unreachable!(),
+    },
+    Term,
+};
+
+ExprOp: &'static str = {
+    "+" => "+",
+    "-" => "-",
+};
+
+Term: Box<Expr> = {
+    <t:Term> "*" <f:Factor> => Box::new(Expr::Mul(t, f)),
+    Factor,
+};
+
+Factor: Box<Expr> = {
+    <b:Base> "^" <f:Factor> => Box::new(Expr::Exp(b, f)),
+    Base,
+};
+
+Base: Box<Expr> = {
+    <n:Num> => Box::new(Expr::Const(n)),
+    <id:Id> => Box::new(Expr::Var(id)),
+    <mv:MetaVar> => Box::new(Expr::Metavar(mv)),
+    "-" <b:Base> => Box::new(Expr::Neg(b)),
+    "(" <e:Expr> ")" => e,
+};
+
+Num: i32 = {
+    r"[0-9]+" => i32::from_str(<>).unwrap()
+};
+
+Id: String = {
+    r"[a-zA-Z][a-zA-Z0-9]*" => <>.to_string()
+};
+
+MetaVar: String = {
+    r"\$[a-zA-Z][a-zA-Z0-9]*" => <>[1..].to_string()
+};
