@@ -1,0 +1,202 @@
+use std::fmt;
+
+use crate::syntax::Expr;
+
+#[derive(Debug)]
+pub enum Error {
+    NegativePower,
+    Metavar,
+    Parse(String),
+}
+
+impl std::error::Error for Error {}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NegativePower => write!(f, "cannot raise to a negative power"),
+            Error::Metavar => write!(f, "metavariable"),
+            Error::Parse(msg) => write!(f, "parse error: {}", msg),
+        }
+    }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+fn pow(a: i32, n: i32) -> Result<i32> {
+    match n {
+        0 => Ok(1),
+        1 => Ok(a),
+        n if n < 0 => Err(Error::NegativePower),
+        n => {
+            let b = pow(a, n / 2)?;
+            Ok(b * b * if n % 2 == 0 { 1 } else { a })
+        }
+    }
+}
+
+pub fn simplify1(expr: Expr) -> Result<Expr> {
+    match expr {
+        Expr::Add(a, b) => match (*a, *b) {
+            (Expr::Const(0), x) | (x, Expr::Const(0)) => Ok(x),
+            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m + n)),
+            (a, b) => Ok(Expr::Add(Box::new(a), Box::new(b))),
+        },
+        Expr::Sub(a, b) => match (*a, *b) {
+            (x, Expr::Const(0)) => Ok(x),
+            (x, y) if x == y => Ok(Expr::Const(0)),
+            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
+            (a, b) => Ok(Expr::Sub(Box::new(a), Box::new(b))),
+        },
+        Expr::Mul(a, b) => match (*a, *b) {
+            (Expr::Const(0), _) | (_, Expr::Const(0)) => Ok(Expr::Const(0)),
+            (Expr::Const(1), x) | (x, Expr::Const(1)) => Ok(x),
+            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m * n)),
+            (a, b) => Ok(Expr::Mul(Box::new(a), Box::new(b))),
+        },
+        Expr::Exp(a, b) => match (*a, *b) {
+            (_, Expr::Const(0)) => Ok(Expr::Const(1)),
+            (Expr::Const(0), _) => Ok(Expr::Const(0)),
+            (Expr::Const(1), _) => Ok(Expr::Const(1)),
+            (x, Expr::Const(1)) => Ok(x),
+            (_, Expr::Neg(n)) if matches!(*n, Expr::Const(_)) => Err(Error::NegativePower),
+            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(pow(m, n)?)),
+            (a, b) => Ok(Expr::Exp(Box::new(a), Box::new(b))),
+        },
+        Expr::Neg(a) => match *a {
+            Expr::Neg(x) => Ok(*x),
+            Expr::Const(m) => Ok(Expr::Const(-m)),
+            a => Ok(Expr::Neg(Box::new(a))),
+        },
+        Expr::Metavar(_) => Err(Error::Metavar),
+        expr => Ok(expr),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StackItem {
+    expr: Expr,
+    visited: bool,
+}
+
+// Simplify using post-order traversal
+pub fn simplify(expr: Expr) -> Result<Expr> {
+    let mut stack = vec![StackItem {
+        expr,
+        visited: false,
+    }];
+
+    let mut results = Vec::new();
+
+    while let Some(mut item) = stack.pop() {
+        if item.visited {
+            // Process this node using already simplified children
+            let result = match item.expr {
+                Expr::Add(_, _) => {
+                    let b_res = results.pop().unwrap();
+                    let a_res = results.pop().unwrap();
+                    simplify1(Expr::Add(Box::new(a_res), Box::new(b_res)))?
+                }
+                Expr::Sub(_, _) => {
+                    let b_res = results.pop().unwrap();
+                    let a_res = results.pop().unwrap();
+                    simplify1(Expr::Sub(Box::new(a_res), Box::new(b_res)))?
+                }
+                Expr::Mul(_, _) => {
+                    let b_res = results.pop().unwrap();
+                    let a_res = results.pop().unwrap();
+                    simplify1(Expr::Mul(Box::new(a_res), Box::new(b_res)))?
+                }
+                Expr::Exp(_, _) => {
+                    let b_res = results.pop().unwrap();
+                    let a_res = results.pop().unwrap();
+                    simplify1(Expr::Exp(Box::new(a_res), Box::new(b_res)))?
+                }
+                Expr::Neg(_) => {
+                    let a_res = results.pop().unwrap();
+                    simplify1(Expr::Neg(Box::new(a_res)))?
+                }
+                expr => simplify1(expr)?,
+            };
+            results.push(result);
+        } else {
+            // Mark as visited and add children to stack
+            item.visited = true;
+            stack.push(item.clone());
+
+            match item.expr {
+                Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
+                    stack.push(StackItem {
+                        expr: *b,
+                        visited: false,
+                    });
+                    stack.push(StackItem {
+                        expr: *a,
+                        visited: false,
+                    });
+                }
+                Expr::Neg(a) => {
+                    stack.push(StackItem {
+                        expr: *a,
+                        visited: false,
+                    });
+                }
+                expr => {
+                    // For leaf nodes, just simplify directly
+                    let result = simplify1(expr)?;
+                    results.push(result);
+                    // Remove the visited marker we just pushed
+                    stack.pop();
+                }
+            }
+        }
+    }
+
+    // The final result should be the only item in the results vector
+    let mut result = results.pop().unwrap();
+
+    // Keep simplifying until we reach a fixed point
+    loop {
+        let simplified = simplify1(result.clone())?;
+        if simplified == result {
+            break Ok(result);
+        }
+        result = simplified;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::syntax::Expr;
+    use crate::{parser, semantics};
+
+    #[test]
+    fn test_simplify_basic() {
+        let input = parser::parse_expr("40 + 2").unwrap();
+        let actual = semantics::simplify(input).unwrap();
+        let expected = Expr::Const(42);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_simplify() {
+        let inputs: &[(Expr, &str)] = &[
+            (Expr::Const(7), "1 + 2 * 3"),
+            (Expr::Const(21), "(1 + 2) * (3 + 4)"),
+            (Expr::Const(15), "(0 * x + 1) * 3 + 12"),
+            (Expr::Const(0), "0 + (0 + (1 - 1))"),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Const(15)),
+                ),
+                "(x + 15 - 12 * 0)",
+            ),
+        ];
+        for (expected, input_str) in inputs {
+            let input = parser::parse_expr(input_str).unwrap();
+            let actual = semantics::simplify(input).unwrap();
+            assert_eq!(*expected, actual, "{}", input_str);
+        }
+    }
+}

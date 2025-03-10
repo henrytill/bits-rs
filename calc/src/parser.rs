@@ -1,6 +1,7 @@
 use lalrpop_util::lalrpop_mod;
 
-use crate::syntax::{Error, Expr, Result};
+use crate::semantics::{Error, Result};
+use crate::syntax::Expr;
 
 lalrpop_mod!(pub grammar);
 
