@@ -3,13 +3,13 @@ use quote::quote;
 
 use calc::syntax::Expr;
 
-pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
-    // Define a stack item to track nodes and their visit status
-    struct StackItem<'a> {
-        expr: &'a Expr,
-        visited: bool,
-    }
+#[derive(Debug, PartialEq, Eq)]
+struct StackItem<'a> {
+    expr: &'a Expr,
+    visited: bool,
+}
 
+pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
     let mut stack = vec![StackItem { expr, visited: false }];
     let mut results = Vec::new();
 
@@ -89,5 +89,7 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
     }
 
     // The final result should be the only item in the results vector
+    assert_eq!(results.len(), 1);
+
     results.pop().unwrap()
 }
