@@ -206,122 +206,53 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
 
 #[cfg(test)]
 mod tests {
-    use crate::syntax::Expr;
     use crate::{parser, semantics};
 
     #[test]
     fn test_simplify_basic() {
+        let expected = parser::parse_expr("42").unwrap();
         let input = parser::parse_expr("40 + 2").unwrap();
         let actual = semantics::simplify(&input).unwrap();
-        let expected = Expr::Const(42);
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_simplify() {
-        let inputs: &[(Expr, &str)] = &[
-            (Expr::Const(7), "1 + 2 * 3"),
-            (Expr::Const(21), "(1 + 2) * (3 + 4)"),
-            (Expr::Const(15), "(0 * x + 1) * 3 + 12"),
-            (Expr::Const(0), "0 + (0 + (1 - 1))"),
-            (
-                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(15))),
-                "x + 15 - 12 * 0",
-            ),
-            (Expr::Neg(Box::new(Expr::Var(String::from("x")))), "-(-(-(x)))"),
-            (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Var(String::from("y"))),
-                ),
-                "0 + (x + (0 + y))",
-            ),
-            (
-                Expr::Mul(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Var(String::from("y"))),
-                ),
-                "1 * (x * (1 * y))",
-            ),
-            (Expr::Const(0), "z * (0 * (x * y))"),
-            (
-                Expr::Sub(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Sub(
-                        Box::new(Expr::Var(String::from("y"))),
-                        Box::new(Expr::Sub(
-                            Box::new(Expr::Var(String::from("y"))),
-                            Box::new(Expr::Var(String::from("x"))),
-                        )),
-                    )),
-                ),
-                "x - (y - (y - x))",
-            ),
-            (Expr::Const(8), "2 ^ (1 + 2)"),
-            (
-                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(1))),
-                "(x + 0) * (1 + (y - y)) + (z ^ 0)",
-            ),
-            (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Var(String::from("z"))),
-                ),
-                "(x + 0) * (1 + (y - y)) + (z ^ 1)",
-            ),
-            (
-                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(3))),
-                "((((x + 1) - 1) + 2) - 2) + 3",
-            ),
+        static INPUTS: &[(&str, &str)] = &[
+            ("7", "1 + 2 * 3"),
+            ("21", "(1 + 2) * (3 + 4)"),
+            ("15", "(0 * x + 1) * 3 + 12"),
+            ("0", "0 + (0 + (1 - 1))"),
+            ("x + 15", "x + 15 - 12 * 0"),
+            ("-x", "-(-(-(x)))"),
+            ("x  + y", "0 + (x + (0 + y))"),
+            ("x * y", "1 * (x * (1 * y))"),
+            ("0", "z * (0 * (x * y))"),
+            ("x - (y - (y - x))", "x - (y - (y - x))"),
+            ("8", "2 ^ (1 + 2)"),
+            ("x + 1", "(x + 0) * (1 + (y - y)) + (z ^ 0)"),
+            ("x + z", "(x + 0) * (1 + (y - y)) + (z ^ 1)"),
+            ("x + 3", "((((x + 1) - 1) + 2) - 2) + 3"),
             // Tests for c1 + (x - c2) -> x when c1 == c2
-            (Expr::Var(String::from("x")), "5 + (x - 5)"),
-            (
-                Expr::Add(Box::new(Expr::Var(String::from("y"))), Box::new(Expr::Const(3))),
-                "7 + ((y + 3) - 7)",
-            ),
+            ("x", "5 + (x - 5)"),
+            ("y + 3", "7 + ((y + 3) - 7)"),
             // Tests for c1 - (x + c2) -> -x when c1 == c2
-            (Expr::Neg(Box::new(Expr::Var(String::from("z")))), "4 - (z + 4)"),
-            (
-                Expr::Neg(Box::new(Expr::Mul(
-                    Box::new(Expr::Var(String::from("a"))),
-                    Box::new(Expr::Var(String::from("b"))),
-                ))),
-                "10 - ((a * b) + 10)",
-            ),
+            ("-z", "4 - (z + 4)"),
+            ("-(a * b)", "10 - ((a * b) + 10)"),
             // More complex nested cases
-            (Expr::Var(String::from("x")), "3 + ((x - 1) - 2)"),
-            (Expr::Neg(Box::new(Expr::Var(String::from("y")))), "5 - ((3 + (y + 2)))"),
-            (
-                Expr::Mul(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Add(
-                        Box::new(Expr::Var(String::from("y"))),
-                        Box::new(Expr::Var(String::from("z"))),
-                    )),
-                ),
-                "x * (y + (z * (2 - 1))) + (0 * w)",
-            ),
-            (
-                Expr::Mul(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Var(String::from("y"))),
-                ),
-                "(x * (y + 0)) + (0 * z)",
-            ),
-            (
-                Expr::Mul(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Var(String::from("y"))),
-                ),
-                "x * (y ^ ((0 + 2) - 1))",
-            ),
-            (Expr::Var(String::from("x")), "((x * 1) + 0) - ((y - y) * z)"),
-            (Expr::Const(1), "1 + ((x - x) * (y + z))"),
+            ("x", "3 + ((x - 1) - 2)"),
+            ("-y", "5 - ((3 + (y + 2)))"),
+            ("x * (y + z)", "x * (y + (z * (2 - 1))) + (0 * w)"),
+            ("x * y", "(x * (y + 0)) + (0 * z)"),
+            ("x * y", "x * (y ^ ((0 + 2) - 1))"),
+            ("x", "((x * 1) + 0) - ((y - y) * z)"),
+            ("1", "1 + ((x - x) * (y + z))"),
         ];
-        for (expected, input_str) in inputs {
+        for (expected_str, input_str) in INPUTS {
+            let expected = parser::parse_expr(expected_str).unwrap();
             let input = parser::parse_expr(input_str).unwrap();
             let actual = semantics::simplify(&input).unwrap();
-            assert_eq!(*expected, actual, "{}", input_str);
+            assert_eq!(expected, actual, "{}", input_str);
         }
     }
 }
