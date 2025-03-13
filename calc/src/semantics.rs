@@ -28,10 +28,7 @@ fn pow(a: i32, n: i32) -> Result<i32> {
         0 => Ok(1),
         1 => Ok(a),
         n if n < 0 => Err(Error::NegativePower),
-        n => {
-            let b = pow(a, n / 2)?;
-            Ok(b * b * if n % 2 == 0 { 1 } else { a })
-        }
+        n => Ok(a.pow(n as u32)),
     }
 }
 
