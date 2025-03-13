@@ -169,24 +169,24 @@ pub fn simplify(expr: Expr) -> Result<Expr> {
             };
             results.push(result);
         } else {
-            // Mark as visited and add children to stack
+            // Mark as visited and add item (parent) and its children to stack
             item.visited = true;
-            stack.push(item.clone());
+            let parent = item.clone();
 
             match item.expr {
                 Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
+                    stack.push(parent);
                     stack.push(StackItem { expr: *b, visited: false });
                     stack.push(StackItem { expr: *a, visited: false });
                 }
                 Expr::Neg(a) => {
+                    stack.push(parent);
                     stack.push(StackItem { expr: *a, visited: false });
                 }
                 expr => {
                     // For leaf nodes, just simplify directly
                     let result = simplify1(expr)?;
                     results.push(result);
-                    // Remove the visited marker we just pushed
-                    stack.pop();
                 }
             }
         }
