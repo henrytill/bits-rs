@@ -40,12 +40,90 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
         Expr::Add(a, b) => match (*a, *b) {
             (Expr::Const(0), x) | (x, Expr::Const(0)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m + n)),
+            // Handle (x - c1) + c2 -> x when c1 == c2
+            (Expr::Sub(e, c), Expr::Const(m)) => {
+                if let Expr::Const(n) = *c {
+                    if n == m {
+                        return Ok(*e);
+                    }
+                }
+                Ok(Expr::Add(
+                    Box::new(Expr::Sub(e, c)),
+                    Box::new(Expr::Const(m)),
+                ))
+            }
+            // Handle c1 + (x - c2) -> x when c1 == c2
+            (Expr::Const(m), Expr::Sub(e, c)) => {
+                if let Expr::Const(n) = *c {
+                    if n == m {
+                        return Ok(*e);
+                    }
+                }
+                Ok(Expr::Add(
+                    Box::new(Expr::Const(m)),
+                    Box::new(Expr::Sub(e, c)),
+                ))
+            }
+            // Handle c1 + (e + c2) -> e + (c1 + c2)
+            (Expr::Const(m), Expr::Add(e, c)) => {
+                if let Expr::Const(n) = *c {
+                    return Ok(Expr::Add(e, Box::new(Expr::Const(m + n))));
+                }
+                Ok(Expr::Add(
+                    Box::new(Expr::Const(m)),
+                    Box::new(Expr::Add(e, c)),
+                ))
+            }
+            // Handle (e + c1) + c2 -> e + (c1 + c2)
+            (Expr::Add(e, c), Expr::Const(m)) => {
+                if let Expr::Const(n) = *c {
+                    return Ok(Expr::Add(e, Box::new(Expr::Const(n + m))));
+                }
+                Ok(Expr::Add(
+                    Box::new(Expr::Add(e, c)),
+                    Box::new(Expr::Const(m)),
+                ))
+            }
             (a, b) => Ok(Expr::Add(Box::new(a), Box::new(b))),
         },
         Expr::Sub(a, b) => match (*a, *b) {
             (x, Expr::Const(0)) => Ok(x),
             (x, y) if x == y => Ok(Expr::Const(0)),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
+            // Handle (x + c1) - c2 -> x when c1 == c2
+            (Expr::Add(e, c), Expr::Const(m)) => {
+                if let Expr::Const(n) = *c {
+                    if n == m {
+                        return Ok(*e);
+                    }
+                }
+                Ok(Expr::Sub(
+                    Box::new(Expr::Add(e, c)),
+                    Box::new(Expr::Const(m)),
+                ))
+            }
+            // Handle c1 - (x + c2) -> -x when c1 == c2
+            (Expr::Const(m), Expr::Add(e, c)) => {
+                if let Expr::Const(n) = *c {
+                    if n == m {
+                        return Ok(Expr::Neg(Box::new(*e)));
+                    }
+                }
+                Ok(Expr::Sub(
+                    Box::new(Expr::Const(m)),
+                    Box::new(Expr::Add(e, c)),
+                ))
+            }
+            // Handle (e - c1) - c2 -> e - (c1 + c2)
+            (Expr::Sub(e, c), Expr::Const(n)) => {
+                if let Expr::Const(m) = *c {
+                    return Ok(Expr::Sub(e, Box::new(Expr::Const(m + n))));
+                }
+                Ok(Expr::Sub(
+                    Box::new(Expr::Sub(e, c)),
+                    Box::new(Expr::Const(n)),
+                ))
+            }
             (a, b) => Ok(Expr::Sub(Box::new(a), Box::new(b))),
         },
         Expr::Mul(a, b) => match (*a, *b) {
@@ -192,6 +270,116 @@ mod tests {
                 ),
                 "(x + 15 - 12 * 0)",
             ),
+            (
+                Expr::Neg(Box::new(Expr::Var(String::from("x")))),
+                "-(-(-(x)))",
+            ),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Var(String::from("y"))),
+                ),
+                "(0 + (x + (0 + y)))",
+            ),
+            (
+                Expr::Mul(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Var(String::from("y"))),
+                ),
+                "(1 * (x * (1 * y)))",
+            ),
+            (Expr::Const(0), "(z * (0 * (x * y)))"),
+            (
+                Expr::Sub(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Sub(
+                        Box::new(Expr::Var(String::from("y"))),
+                        Box::new(Expr::Sub(
+                            Box::new(Expr::Var(String::from("y"))),
+                            Box::new(Expr::Var(String::from("x"))),
+                        )),
+                    )),
+                ),
+                "(x - (y - (y - x)))",
+            ),
+            (Expr::Const(8), "(2 ^ (1 + 2))"),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Const(1)),
+                ),
+                "((x + 0) * (1 + (y - y)) + (z ^ 0))",
+            ),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Var(String::from("z"))),
+                ),
+                "((x + 0) * (1 + (y - y)) + (z ^ 1))",
+            ),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Const(3)),
+                ),
+                "(((((x + 1) - 1) + 2) - 2) + 3)",
+            ),
+            // Tests for c1 + (x - c2) -> x when c1 == c2
+            (Expr::Var(String::from("x")), "5 + (x - 5)"),
+            (
+                Expr::Add(
+                    Box::new(Expr::Var(String::from("y"))),
+                    Box::new(Expr::Const(3)),
+                ),
+                "7 + ((y + 3) - 7)",
+            ),
+            // Tests for c1 - (x + c2) -> -x when c1 == c2
+            (
+                Expr::Neg(Box::new(Expr::Var(String::from("z")))),
+                "4 - (z + 4)",
+            ),
+            (
+                Expr::Neg(Box::new(Expr::Mul(
+                    Box::new(Expr::Var(String::from("a"))),
+                    Box::new(Expr::Var(String::from("b"))),
+                ))),
+                "10 - ((a * b) + 10)",
+            ),
+            // More complex nested cases
+            (Expr::Var(String::from("x")), "3 + ((x - 1) - 2)"),
+            (
+                Expr::Neg(Box::new(Expr::Var(String::from("y")))),
+                "5 - ((3 + (y + 2)))",
+            ),
+            (
+                Expr::Mul(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Add(
+                        Box::new(Expr::Var(String::from("y"))),
+                        Box::new(Expr::Var(String::from("z"))),
+                    )),
+                ),
+                "(x * (y + (z * (2 - 1))) + (0 * w))",
+            ),
+            (
+                Expr::Mul(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Var(String::from("y"))),
+                ),
+                "((x * (y + 0)) + (0 * z))",
+            ),
+            (
+                Expr::Mul(
+                    Box::new(Expr::Var(String::from("x"))),
+                    Box::new(Expr::Var(String::from("y"))),
+                ),
+                "(x * (y ^ ((0 + 2) - 1)))",
+            ),
+            (
+                Expr::Var(String::from("x")),
+                "(((x * 1) + 0) - ((y - y) * z))",
+            ),
+            (Expr::Const(1), "(1 + ((x - x) * (y + z)))"),
         ];
         for (expected, input_str) in inputs {
             let input = parser::parse_expr(input_str).unwrap();
