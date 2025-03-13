@@ -1,14 +1,13 @@
 use lalrpop_util::lalrpop_mod;
 
-use crate::semantics::{Error, Result};
 use crate::syntax::Expr;
 
 lalrpop_mod!(pub grammar);
 
-pub fn parse_expr(input: &str) -> Result<Expr> {
+pub fn parse_expr(input: &str) -> Result<Expr, String> {
     match grammar::ExprParser::new().parse(input) {
         Ok(expr) => Ok(*expr),
-        Err(e) => Err(Error::Parse(e.to_string())),
+        Err(e) => Err(e.to_string()),
     }
 }
 

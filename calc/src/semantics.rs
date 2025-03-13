@@ -6,7 +6,6 @@ use crate::syntax::Expr;
 pub enum Error {
     NegativePower,
     Metavar,
-    Parse(String),
 }
 
 impl std::error::Error for Error {}
@@ -16,7 +15,6 @@ impl fmt::Display for Error {
         match self {
             Error::NegativePower => write!(f, "cannot raise to a negative power"),
             Error::Metavar => write!(f, "metavariable"),
-            Error::Parse(msg) => write!(f, "parse error: {}", msg),
         }
     }
 }
