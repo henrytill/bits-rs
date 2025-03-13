@@ -126,13 +126,13 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct StackItem {
-    expr: Expr,
+struct StackItem<'a> {
+    expr: &'a Expr,
     visited: bool,
 }
 
 // Simplify using post-order traversal
-pub fn simplify(expr: Expr) -> Result<Expr> {
+pub fn simplify(expr: &Expr) -> Result<Expr> {
     let mut stack = vec![StackItem { expr, visited: false }];
 
     let mut results = Vec::new();
@@ -165,27 +165,26 @@ pub fn simplify(expr: Expr) -> Result<Expr> {
                     let a_res = results.pop().unwrap();
                     simplify1(Expr::Neg(Box::new(a_res)))?
                 }
-                expr => simplify1(expr)?,
+                expr => simplify1(expr.clone())?,
             };
             results.push(result);
         } else {
-            // Mark as visited and add item (parent) and its children to stack
+            // Mark as visited and add item and its children to stack
             item.visited = true;
-            let parent = item.clone();
 
             match item.expr {
                 Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
-                    stack.push(parent);
-                    stack.push(StackItem { expr: *b, visited: false });
-                    stack.push(StackItem { expr: *a, visited: false });
+                    stack.push(item);
+                    stack.push(StackItem { expr: b.as_ref(), visited: false });
+                    stack.push(StackItem { expr: a.as_ref(), visited: false });
                 }
                 Expr::Neg(a) => {
-                    stack.push(parent);
-                    stack.push(StackItem { expr: *a, visited: false });
+                    stack.push(item);
+                    stack.push(StackItem { expr: a.as_ref(), visited: false });
                 }
                 expr => {
                     // For leaf nodes, just simplify directly
-                    let result = simplify1(expr)?;
+                    let result = simplify1(expr.clone())?;
                     results.push(result);
                 }
             }
@@ -213,7 +212,7 @@ mod tests {
     #[test]
     fn test_simplify_basic() {
         let input = parser::parse_expr("40 + 2").unwrap();
-        let actual = semantics::simplify(input).unwrap();
+        let actual = semantics::simplify(&input).unwrap();
         let expected = Expr::Const(42);
         assert_eq!(expected, actual);
     }
@@ -321,7 +320,7 @@ mod tests {
         ];
         for (expected, input_str) in inputs {
             let input = parser::parse_expr(input_str).unwrap();
-            let actual = semantics::simplify(input).unwrap();
+            let actual = semantics::simplify(&input).unwrap();
             assert_eq!(*expected, actual, "{}", input_str);
         }
     }
