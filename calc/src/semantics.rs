@@ -47,10 +47,7 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Add(
-                    Box::new(Expr::Sub(e, c)),
-                    Box::new(Expr::Const(m)),
-                ))
+                Ok(Expr::Add(Box::new(Expr::Sub(e, c)), Box::new(Expr::Const(m))))
             }
             // Handle c1 + (x - c2) -> x when c1 == c2
             (Expr::Const(m), Expr::Sub(e, c)) => {
@@ -59,30 +56,21 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Add(
-                    Box::new(Expr::Const(m)),
-                    Box::new(Expr::Sub(e, c)),
-                ))
+                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Sub(e, c))))
             }
             // Handle c1 + (e + c2) -> e + (c1 + c2)
             (Expr::Const(m), Expr::Add(e, c)) => {
                 if let Expr::Const(n) = *c {
                     return Ok(Expr::Add(e, Box::new(Expr::Const(m + n))));
                 }
-                Ok(Expr::Add(
-                    Box::new(Expr::Const(m)),
-                    Box::new(Expr::Add(e, c)),
-                ))
+                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
             }
             // Handle (e + c1) + c2 -> e + (c1 + c2)
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
                     return Ok(Expr::Add(e, Box::new(Expr::Const(n + m))));
                 }
-                Ok(Expr::Add(
-                    Box::new(Expr::Add(e, c)),
-                    Box::new(Expr::Const(m)),
-                ))
+                Ok(Expr::Add(Box::new(Expr::Add(e, c)), Box::new(Expr::Const(m))))
             }
             (a, b) => Ok(Expr::Add(Box::new(a), Box::new(b))),
         },
@@ -97,10 +85,7 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Sub(
-                    Box::new(Expr::Add(e, c)),
-                    Box::new(Expr::Const(m)),
-                ))
+                Ok(Expr::Sub(Box::new(Expr::Add(e, c)), Box::new(Expr::Const(m))))
             }
             // Handle c1 - (x + c2) -> -x when c1 == c2
             (Expr::Const(m), Expr::Add(e, c)) => {
@@ -109,20 +94,14 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(Expr::Neg(Box::new(*e)));
                     }
                 }
-                Ok(Expr::Sub(
-                    Box::new(Expr::Const(m)),
-                    Box::new(Expr::Add(e, c)),
-                ))
+                Ok(Expr::Sub(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
             }
             // Handle (e - c1) - c2 -> e - (c1 + c2)
             (Expr::Sub(e, c), Expr::Const(n)) => {
                 if let Expr::Const(m) = *c {
                     return Ok(Expr::Sub(e, Box::new(Expr::Const(m + n))));
                 }
-                Ok(Expr::Sub(
-                    Box::new(Expr::Sub(e, c)),
-                    Box::new(Expr::Const(n)),
-                ))
+                Ok(Expr::Sub(Box::new(Expr::Sub(e, c)), Box::new(Expr::Const(n))))
             }
             (a, b) => Ok(Expr::Sub(Box::new(a), Box::new(b))),
         },
@@ -159,10 +138,7 @@ struct StackItem {
 
 // Simplify using post-order traversal
 pub fn simplify(expr: Expr) -> Result<Expr> {
-    let mut stack = vec![StackItem {
-        expr,
-        visited: false,
-    }];
+    let mut stack = vec![StackItem { expr, visited: false }];
 
     let mut results = Vec::new();
 
@@ -204,20 +180,11 @@ pub fn simplify(expr: Expr) -> Result<Expr> {
 
             match item.expr {
                 Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
-                    stack.push(StackItem {
-                        expr: *b,
-                        visited: false,
-                    });
-                    stack.push(StackItem {
-                        expr: *a,
-                        visited: false,
-                    });
+                    stack.push(StackItem { expr: *b, visited: false });
+                    stack.push(StackItem { expr: *a, visited: false });
                 }
                 Expr::Neg(a) => {
-                    stack.push(StackItem {
-                        expr: *a,
-                        visited: false,
-                    });
+                    stack.push(StackItem { expr: *a, visited: false });
                 }
                 expr => {
                     // For leaf nodes, just simplify directly
@@ -264,16 +231,10 @@ mod tests {
             (Expr::Const(15), "(0 * x + 1) * 3 + 12"),
             (Expr::Const(0), "0 + (0 + (1 - 1))"),
             (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Const(15)),
-                ),
+                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(15))),
                 "(x + 15 - 12 * 0)",
             ),
-            (
-                Expr::Neg(Box::new(Expr::Var(String::from("x")))),
-                "-(-(-(x)))",
-            ),
+            (Expr::Neg(Box::new(Expr::Var(String::from("x")))), "-(-(-(x)))"),
             (
                 Expr::Add(
                     Box::new(Expr::Var(String::from("x"))),
@@ -304,10 +265,7 @@ mod tests {
             ),
             (Expr::Const(8), "(2 ^ (1 + 2))"),
             (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Const(1)),
-                ),
+                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(1))),
                 "((x + 0) * (1 + (y - y)) + (z ^ 0))",
             ),
             (
@@ -318,26 +276,17 @@ mod tests {
                 "((x + 0) * (1 + (y - y)) + (z ^ 1))",
             ),
             (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("x"))),
-                    Box::new(Expr::Const(3)),
-                ),
+                Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(3))),
                 "(((((x + 1) - 1) + 2) - 2) + 3)",
             ),
             // Tests for c1 + (x - c2) -> x when c1 == c2
             (Expr::Var(String::from("x")), "5 + (x - 5)"),
             (
-                Expr::Add(
-                    Box::new(Expr::Var(String::from("y"))),
-                    Box::new(Expr::Const(3)),
-                ),
+                Expr::Add(Box::new(Expr::Var(String::from("y"))), Box::new(Expr::Const(3))),
                 "7 + ((y + 3) - 7)",
             ),
             // Tests for c1 - (x + c2) -> -x when c1 == c2
-            (
-                Expr::Neg(Box::new(Expr::Var(String::from("z")))),
-                "4 - (z + 4)",
-            ),
+            (Expr::Neg(Box::new(Expr::Var(String::from("z")))), "4 - (z + 4)"),
             (
                 Expr::Neg(Box::new(Expr::Mul(
                     Box::new(Expr::Var(String::from("a"))),
@@ -347,10 +296,7 @@ mod tests {
             ),
             // More complex nested cases
             (Expr::Var(String::from("x")), "3 + ((x - 1) - 2)"),
-            (
-                Expr::Neg(Box::new(Expr::Var(String::from("y")))),
-                "5 - ((3 + (y + 2)))",
-            ),
+            (Expr::Neg(Box::new(Expr::Var(String::from("y")))), "5 - ((3 + (y + 2)))"),
             (
                 Expr::Mul(
                     Box::new(Expr::Var(String::from("x"))),
@@ -375,10 +321,7 @@ mod tests {
                 ),
                 "(x * (y ^ ((0 + 2) - 1)))",
             ),
-            (
-                Expr::Var(String::from("x")),
-                "(((x * 1) + 0) - ((y - y) * z))",
-            ),
+            (Expr::Var(String::from("x")), "(((x * 1) + 0) - ((y - y) * z))"),
             (Expr::Const(1), "(1 + ((x - x) * (y + z)))"),
         ];
         for (expected, input_str) in inputs {

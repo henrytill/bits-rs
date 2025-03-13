@@ -31,10 +31,7 @@ mod tests {
         let actual = parse_expr("1 + 2 * 3").unwrap();
         let expected = Expr::Add(
             Box::new(Expr::Const(1)),
-            Box::new(Expr::Mul(
-                Box::new(Expr::Const(2)),
-                Box::new(Expr::Const(3)),
-            )),
+            Box::new(Expr::Mul(Box::new(Expr::Const(2)), Box::new(Expr::Const(3)))),
         );
         assert_eq!(expected, actual);
     }
@@ -43,10 +40,7 @@ mod tests {
     fn test_parse_precedence() {
         let actual = parse_expr("1 * 2 + 3").unwrap();
         let expected = Expr::Add(
-            Box::new(Expr::Mul(
-                Box::new(Expr::Const(1)),
-                Box::new(Expr::Const(2)),
-            )),
+            Box::new(Expr::Mul(Box::new(Expr::Const(1)), Box::new(Expr::Const(2)))),
             Box::new(Expr::Const(3)),
         );
         assert_eq!(expected, actual);
