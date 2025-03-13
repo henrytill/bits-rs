@@ -232,7 +232,7 @@ mod tests {
             (Expr::Const(0), "0 + (0 + (1 - 1))"),
             (
                 Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(15))),
-                "(x + 15 - 12 * 0)",
+                "x + 15 - 12 * 0",
             ),
             (Expr::Neg(Box::new(Expr::Var(String::from("x")))), "-(-(-(x)))"),
             (
@@ -240,16 +240,16 @@ mod tests {
                     Box::new(Expr::Var(String::from("x"))),
                     Box::new(Expr::Var(String::from("y"))),
                 ),
-                "(0 + (x + (0 + y)))",
+                "0 + (x + (0 + y))",
             ),
             (
                 Expr::Mul(
                     Box::new(Expr::Var(String::from("x"))),
                     Box::new(Expr::Var(String::from("y"))),
                 ),
-                "(1 * (x * (1 * y)))",
+                "1 * (x * (1 * y))",
             ),
-            (Expr::Const(0), "(z * (0 * (x * y)))"),
+            (Expr::Const(0), "z * (0 * (x * y))"),
             (
                 Expr::Sub(
                     Box::new(Expr::Var(String::from("x"))),
@@ -261,23 +261,23 @@ mod tests {
                         )),
                     )),
                 ),
-                "(x - (y - (y - x)))",
+                "x - (y - (y - x))",
             ),
-            (Expr::Const(8), "(2 ^ (1 + 2))"),
+            (Expr::Const(8), "2 ^ (1 + 2)"),
             (
                 Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(1))),
-                "((x + 0) * (1 + (y - y)) + (z ^ 0))",
+                "(x + 0) * (1 + (y - y)) + (z ^ 0)",
             ),
             (
                 Expr::Add(
                     Box::new(Expr::Var(String::from("x"))),
                     Box::new(Expr::Var(String::from("z"))),
                 ),
-                "((x + 0) * (1 + (y - y)) + (z ^ 1))",
+                "(x + 0) * (1 + (y - y)) + (z ^ 1)",
             ),
             (
                 Expr::Add(Box::new(Expr::Var(String::from("x"))), Box::new(Expr::Const(3))),
-                "(((((x + 1) - 1) + 2) - 2) + 3)",
+                "((((x + 1) - 1) + 2) - 2) + 3",
             ),
             // Tests for c1 + (x - c2) -> x when c1 == c2
             (Expr::Var(String::from("x")), "5 + (x - 5)"),
@@ -305,24 +305,24 @@ mod tests {
                         Box::new(Expr::Var(String::from("z"))),
                     )),
                 ),
-                "(x * (y + (z * (2 - 1))) + (0 * w))",
+                "x * (y + (z * (2 - 1))) + (0 * w)",
             ),
             (
                 Expr::Mul(
                     Box::new(Expr::Var(String::from("x"))),
                     Box::new(Expr::Var(String::from("y"))),
                 ),
-                "((x * (y + 0)) + (0 * z))",
+                "(x * (y + 0)) + (0 * z)",
             ),
             (
                 Expr::Mul(
                     Box::new(Expr::Var(String::from("x"))),
                     Box::new(Expr::Var(String::from("y"))),
                 ),
-                "(x * (y ^ ((0 + 2) - 1)))",
+                "x * (y ^ ((0 + 2) - 1))",
             ),
-            (Expr::Var(String::from("x")), "(((x * 1) + 0) - ((y - y) * z))"),
-            (Expr::Const(1), "(1 + ((x - x) * (y + z)))"),
+            (Expr::Var(String::from("x")), "((x * 1) + 0) - ((y - y) * z)"),
+            (Expr::Const(1), "1 + ((x - x) * (y + z))"),
         ];
         for (expected, input_str) in inputs {
             let input = parser::parse_expr(input_str).unwrap();
