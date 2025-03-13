@@ -73,8 +73,8 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
         },
         Expr::Sub(a, b) => match (*a, *b) {
             (x, Expr::Const(0)) => Ok(x),
-            (x, y) if x == y => Ok(Expr::Const(0)),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
+            (x, y) if x == y => Ok(Expr::Const(0)),
             // Handle (x + c1) - c2 -> x when c1 == c2
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
