@@ -137,7 +137,7 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
 
     let mut results = Vec::new();
 
-    while let Some(mut item) = stack.pop() {
+    while let Some(item) = stack.pop() {
         if item.visited {
             // Process this node using already simplified children
             let result = match item.expr {
@@ -169,17 +169,14 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
             };
             results.push(result);
         } else {
-            // Mark as visited and add item and its children to stack
-            item.visited = true;
-
             match item.expr {
                 Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
-                    stack.push(item);
+                    stack.push(StackItem { expr: item.expr, visited: true });
                     stack.push(StackItem { expr: b.as_ref(), visited: false });
                     stack.push(StackItem { expr: a.as_ref(), visited: false });
                 }
                 Expr::Neg(a) => {
-                    stack.push(item);
+                    stack.push(StackItem { expr: item.expr, visited: true });
                     stack.push(StackItem { expr: a.as_ref(), visited: false });
                 }
                 expr => {
