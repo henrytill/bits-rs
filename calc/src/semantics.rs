@@ -42,7 +42,7 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Add(Box::new(Expr::Sub(e, c)), Box::new(Expr::Const(m))))
+                Ok(Expr::add(Expr::Sub(e, c), Expr::Const(m)))
             }
             // Handle c1 + (x - c2) -> x when c1 == c2
             (Expr::Const(m), Expr::Sub(e, c)) => {
@@ -51,23 +51,23 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Sub(e, c))))
+                Ok(Expr::add(Expr::Const(m), Expr::Sub(e, c)))
             }
             // Handle (e + c1) + c2 -> e + (c1 + c2)
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
-                    return Ok(Expr::Add(e, Box::new(Expr::Const(n + m))));
+                    return Ok(Expr::add(e, Expr::Const(n + m)));
                 }
-                Ok(Expr::Add(Box::new(Expr::Add(e, c)), Box::new(Expr::Const(m))))
+                Ok(Expr::add(Expr::Add(e, c), Expr::Const(m)))
             }
             // Handle c1 + (e + c2) -> e + (c1 + c2)
             (Expr::Const(m), Expr::Add(e, c)) => {
                 if let Expr::Const(n) = *c {
-                    return Ok(Expr::Add(e, Box::new(Expr::Const(m + n))));
+                    return Ok(Expr::add(e, Expr::Const(m + n)));
                 }
-                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
+                Ok(Expr::add(Expr::Const(m), Expr::Add(e, c)))
             }
-            (a, b) => Ok(Expr::Add(Box::new(a), Box::new(b))),
+            (a, b) => Ok(Expr::add(a, b)),
         },
         Expr::Sub(a, b) => match (*a, *b) {
             (x, Expr::Const(0)) => Ok(x),
@@ -80,31 +80,31 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                         return Ok(*e);
                     }
                 }
-                Ok(Expr::Sub(Box::new(Expr::Add(e, c)), Box::new(Expr::Const(m))))
+                Ok(Expr::sub(Expr::Add(e, c), Expr::Const(m)))
             }
             // Handle c1 - (x + c2) -> -x when c1 == c2
             (Expr::Const(m), Expr::Add(e, c)) => {
                 if let Expr::Const(n) = *c {
                     if n == m {
-                        return Ok(Expr::Neg(Box::new(*e)));
+                        return Ok(Expr::neg(e));
                     }
                 }
-                Ok(Expr::Sub(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
+                Ok(Expr::sub(Expr::Const(m), Expr::Add(e, c)))
             }
             // Handle (e - c1) - c2 -> e - (c1 + c2)
             (Expr::Sub(e, c), Expr::Const(n)) => {
                 if let Expr::Const(m) = *c {
-                    return Ok(Expr::Sub(e, Box::new(Expr::Const(m + n))));
+                    return Ok(Expr::sub(e, Expr::Const(m + n)));
                 }
-                Ok(Expr::Sub(Box::new(Expr::Sub(e, c)), Box::new(Expr::Const(n))))
+                Ok(Expr::sub(Expr::Sub(e, c), Expr::Const(n)))
             }
-            (a, b) => Ok(Expr::Sub(Box::new(a), Box::new(b))),
+            (a, b) => Ok(Expr::sub(a, b)),
         },
         Expr::Mul(a, b) => match (*a, *b) {
             (Expr::Const(0), _) | (_, Expr::Const(0)) => Ok(Expr::Const(0)),
             (Expr::Const(1), x) | (x, Expr::Const(1)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m * n)),
-            (a, b) => Ok(Expr::Mul(Box::new(a), Box::new(b))),
+            (a, b) => Ok(Expr::mul(a, b)),
         },
         Expr::Exp(a, b) => match (*a, *b) {
             (_, Expr::Const(0)) => Ok(Expr::Const(1)),
@@ -113,12 +113,12 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
             (x, Expr::Const(1)) => Ok(x),
             (_, Expr::Neg(n)) if matches!(*n, Expr::Const(_)) => Err(Error::NegativePower),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(pow(m, n)?)),
-            (a, b) => Ok(Expr::Exp(Box::new(a), Box::new(b))),
+            (a, b) => Ok(Expr::exp(a, b)),
         },
         Expr::Neg(a) => match *a {
             Expr::Neg(x) => Ok(*x),
             Expr::Const(m) => Ok(Expr::Const(-m)),
-            a => Ok(Expr::Neg(Box::new(a))),
+            a => Ok(Expr::neg(a)),
         },
         Expr::Metavar(_) => Err(Error::Metavar),
         expr => Ok(expr),

@@ -26,3 +26,25 @@ impl fmt::Display for Expr {
         }
     }
 }
+
+impl Expr {
+    pub fn neg(e: impl Into<Box<Expr>>) -> Expr {
+        Expr::Neg(e.into())
+    }
+
+    pub fn add(a: impl Into<Box<Expr>>, b: impl Into<Box<Expr>>) -> Expr {
+        Expr::Add(a.into(), b.into())
+    }
+
+    pub fn sub(a: impl Into<Box<Expr>>, b: impl Into<Box<Expr>>) -> Expr {
+        Expr::Sub(a.into(), b.into())
+    }
+
+    pub fn mul(a: impl Into<Box<Expr>>, b: impl Into<Box<Expr>>) -> Expr {
+        Expr::Mul(a.into(), b.into())
+    }
+
+    pub fn exp(a: impl Into<Box<Expr>>, b: impl Into<Box<Expr>>) -> Expr {
+        Expr::Exp(a.into(), b.into())
+    }
+}
