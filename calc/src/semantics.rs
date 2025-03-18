@@ -53,19 +53,19 @@ pub fn simplify1(expr: Expr) -> Result<Expr> {
                 }
                 Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Sub(e, c))))
             }
-            // Handle c1 + (e + c2) -> e + (c1 + c2)
-            (Expr::Const(m), Expr::Add(e, c)) => {
-                if let Expr::Const(n) = *c {
-                    return Ok(Expr::Add(e, Box::new(Expr::Const(m + n))));
-                }
-                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
-            }
             // Handle (e + c1) + c2 -> e + (c1 + c2)
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
                     return Ok(Expr::Add(e, Box::new(Expr::Const(n + m))));
                 }
                 Ok(Expr::Add(Box::new(Expr::Add(e, c)), Box::new(Expr::Const(m))))
+            }
+            // Handle c1 + (e + c2) -> e + (c1 + c2)
+            (Expr::Const(m), Expr::Add(e, c)) => {
+                if let Expr::Const(n) = *c {
+                    return Ok(Expr::Add(e, Box::new(Expr::Const(m + n))));
+                }
+                Ok(Expr::Add(Box::new(Expr::Const(m)), Box::new(Expr::Add(e, c))))
             }
             (a, b) => Ok(Expr::Add(Box::new(a), Box::new(b))),
         },
