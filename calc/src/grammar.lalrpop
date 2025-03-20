@@ -5,46 +5,36 @@ use crate::syntax::Expr;
 
 grammar;
 
+// -- Precedence hierarchy (lowest to highest) --
+// 1. Addition, Subtraction
+// 2. Multiplication
+// 3. Exponentiation (right associative)
+// 4. Unary minus, atoms
+
+// Addition and subtraction (lowest precedence)
 pub Expr: Box<Expr> = {
-    <e:Expr> <op:ExprOp> <t:Term> => match op {
-        "+" => Box::new(Expr::Add(e, t)),
-        "-" => Box::new(Expr::Sub(e, t)),
-        _ => unreachable!(),
-    },
-    Term,
+    <lhs:Expr> "+" <rhs:MulExpr> => Box::new(Expr::Add(lhs, rhs)),
+    <lhs:Expr> "-" <rhs:MulExpr> => Box::new(Expr::Sub(lhs, rhs)),
+    MulExpr,
 };
 
-ExprOp: &'static str = {
-    "+" => "+",
-    "-" => "-",
+// Multiplication
+MulExpr: Box<Expr> = {
+    <lhs:MulExpr> "*" <rhs:ExpExpr> => Box::new(Expr::Mul(lhs, rhs)),
+    ExpExpr,
 };
 
-Term: Box<Expr> = {
-    <t:Term> "*" <f:Factor> => Box::new(Expr::Mul(t, f)),
-    Factor,
+// Exponentiation (right associative)
+ExpExpr: Box<Expr> = {
+    <base:AtomExpr> "^" <exp:ExpExpr> => Box::new(Expr::Exp(base, exp)),
+    AtomExpr,
 };
 
-Factor: Box<Expr> = {
-    <b:Base> "^" <f:Factor> => Box::new(Expr::Exp(b, f)),
-    Base,
-};
-
-Base: Box<Expr> = {
-    <n:Num> => Box::new(Expr::Const(n)),
-    <id:Id> => Box::new(Expr::Var(id)),
-    <mv:MetaVar> => Box::new(Expr::Metavar(mv)),
-    "-" <b:Base> => Box::new(Expr::Neg(b)),
-    "(" <e:Expr> ")" => e,
-};
-
-Num: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap()
-};
-
-Id: String = {
-    r"[a-zA-Z][a-zA-Z0-9]*" => <>.to_string()
-};
-
-MetaVar: String = {
-    r"\$[a-zA-Z][a-zA-Z0-9]*" => <>[1..].to_string()
+// Atomic expressions and unary operations (highest precedence)
+AtomExpr: Box<Expr> = {
+    <n:r"[0-9]+"> => Box::new(Expr::Const(i32::from_str(n).unwrap())),
+    <id:r"[a-zA-Z][a-zA-Z0-9]*"> => Box::new(Expr::Var(id.to_string())),
+    <mv:r"\$[a-zA-Z][a-zA-Z0-9]*"> => Box::new(Expr::Metavar(mv[1..].to_string())),
+    "-" <expr:AtomExpr> => Box::new(Expr::Neg(expr)),
+    "(" <expr:Expr> ")" => expr,
 };
