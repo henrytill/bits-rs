@@ -101,11 +101,11 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
 
 fn simplify1(expr: Expr) -> Result<Expr> {
     match expr {
-        Expr::Add(a, b) => simplify1::add(a, b),
-        Expr::Sub(a, b) => simplify1::sub(a, b),
-        Expr::Mul(a, b) => simplify1::mul(a, b),
-        Expr::Exp(a, b) => simplify1::exp(a, b),
-        Expr::Neg(a) => simplify1::neg(a),
+        Expr::Add(a, b) => simplify1::add(*a, *b),
+        Expr::Sub(a, b) => simplify1::sub(*a, *b),
+        Expr::Mul(a, b) => simplify1::mul(*a, *b),
+        Expr::Exp(a, b) => simplify1::exp(*a, *b),
+        Expr::Neg(a) => simplify1::neg(*a),
         Expr::Metavar(_) => Err(Error::Metavar),
         expr => Ok(expr),
     }
@@ -117,8 +117,8 @@ mod simplify1 {
     use super::{Error, Result};
 
     #[inline]
-    pub fn add(a: Box<Expr>, b: Box<Expr>) -> Result<Expr> {
-        match (*a, *b) {
+    pub fn add(a: Expr, b: Expr) -> Result<Expr> {
+        match (a, b) {
             (Expr::Const(0), x) | (x, Expr::Const(0)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m + n)),
             // Handle (x - c1) + c2 -> x when c1 == c2
@@ -158,8 +158,8 @@ mod simplify1 {
     }
 
     #[inline]
-    pub fn sub(a: Box<Expr>, b: Box<Expr>) -> Result<Expr> {
-        match (*a, *b) {
+    pub fn sub(a: Expr, b: Expr) -> Result<Expr> {
+        match (a, b) {
             (x, Expr::Const(0)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
             (x, y) if x == y => Ok(Expr::Const(0)),
@@ -193,8 +193,8 @@ mod simplify1 {
     }
 
     #[inline]
-    pub fn mul(a: Box<Expr>, b: Box<Expr>) -> Result<Expr> {
-        match (*a, *b) {
+    pub fn mul(a: Expr, b: Expr) -> Result<Expr> {
+        match (a, b) {
             (Expr::Const(0), _) | (_, Expr::Const(0)) => Ok(Expr::Const(0)),
             (Expr::Const(1), x) | (x, Expr::Const(1)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m * n)),
@@ -203,8 +203,8 @@ mod simplify1 {
     }
 
     #[inline]
-    pub fn exp(a: Box<Expr>, b: Box<Expr>) -> Result<Expr> {
-        match (*a, *b) {
+    pub fn exp(a: Expr, b: Expr) -> Result<Expr> {
+        match (a, b) {
             (_, Expr::Const(0)) => Ok(Expr::Const(1)),
             (Expr::Const(0), _) => Ok(Expr::Const(0)),
             (Expr::Const(1), _) => Ok(Expr::Const(1)),
@@ -216,8 +216,8 @@ mod simplify1 {
     }
 
     #[inline]
-    pub fn neg(a: Box<Expr>) -> Result<Expr> {
-        match *a {
+    pub fn neg(a: Expr) -> Result<Expr> {
+        match a {
             Expr::Neg(x) => Ok(*x),
             Expr::Const(m) => Ok(Expr::Const(-m)),
             a => Ok(Expr::neg(a)),
