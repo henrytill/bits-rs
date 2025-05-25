@@ -27,21 +27,48 @@ mod tests {
 
     #[test]
     fn test_parse_ops() {
+        let expected = Expr::add(Expr::Const(1), Expr::mul(Expr::Const(2), Expr::Const(3)));
         let actual = parse_expr("1 + 2 * 3").unwrap();
-        let expected = Expr::Add(
-            Box::new(Expr::Const(1)),
-            Box::new(Expr::Mul(Box::new(Expr::Const(2)), Box::new(Expr::Const(3)))),
-        );
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn test_parse_precedence() {
+        let expected = Expr::add(Expr::mul(Expr::Const(1), Expr::Const(2)), Expr::Const(3));
         let actual = parse_expr("1 * 2 + 3").unwrap();
-        let expected = Expr::Add(
-            Box::new(Expr::Mul(Box::new(Expr::Const(1)), Box::new(Expr::Const(2)))),
-            Box::new(Expr::Const(3)),
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_parse_sub_double_negation() {
+        let expected = Expr::sub(
+            Expr::Var(String::from("x")),
+            Expr::neg(Expr::neg(Expr::Var(String::from("x")))),
         );
+        let actual = parse_expr("x - - - x").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_parse_compound1() {
+        let expected = Expr::add(
+            Expr::mul(Expr::Const(2), Expr::Var(String::from("x"))),
+            Expr::Var(String::from("y")),
+        );
+        let actual = parse_expr("2 * x + y").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_parse_compound2() {
+        let expected = Expr::add(
+            Expr::mul(
+                Expr::add(Expr::mul(Expr::Const(0), Expr::Var(String::from("x"))), Expr::Const(1)),
+                Expr::Const(3),
+            ),
+            Expr::Const(12),
+        );
+        let actual = parse_expr("(0 * x + 1) * 3 + 12").unwrap();
         assert_eq!(expected, actual);
     }
 }
