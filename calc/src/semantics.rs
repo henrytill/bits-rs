@@ -30,7 +30,6 @@ struct StackItem<'a> {
 // Simplify using post-order traversal
 pub fn simplify(expr: &Expr) -> Result<Expr> {
     let mut stack = vec![StackItem { expr, visited: false }];
-
     let mut results = Vec::new();
 
     while let Some(item) = stack.pop() {

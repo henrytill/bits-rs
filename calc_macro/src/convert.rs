@@ -58,18 +58,10 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
         } else {
             // Process node on first encounter
             match item.expr {
-                Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
-                    // Push this node back as visited for future processing
-                    stack.push(StackItem { expr: item.expr, visited: true });
-                    // Push children in reverse order (b then a) so a is processed first
-                    stack.push(StackItem { expr: b, visited: false });
-                    stack.push(StackItem { expr: a, visited: false });
-                }
                 Expr::Neg(a) => {
                     stack.push(StackItem { expr: item.expr, visited: true });
                     stack.push(StackItem { expr: a, visited: false });
                 }
-                // For leaf nodes, process them immediately
                 Expr::Var(x) => {
                     results.push(quote! {
                         calc::syntax::Expr::Var(String::from(#x))
@@ -79,6 +71,11 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
                     results.push(quote! {
                         calc::syntax::Expr::Const(#n)
                     });
+                }
+                Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
+                    stack.push(StackItem { expr: item.expr, visited: true });
+                    stack.push(StackItem { expr: b, visited: false });
+                    stack.push(StackItem { expr: a, visited: false });
                 }
                 Expr::Metavar(s) => {
                     let ident = syn::Ident::new(s, proc_macro2::Span::call_site());
