@@ -22,7 +22,7 @@ impl fmt::Display for Expr {
             Expr::Sub(a, b) => write!(f, "({} - {})", a, b),
             Expr::Mul(a, b) => write!(f, "({} * {})", a, b),
             Expr::Exp(a, b) => write!(f, "({} ^ {})", a, b),
-            Expr::Metavar(s) => write!(f, "${}", s),
+            Expr::Metavar(x) => write!(f, "${}", x),
         }
     }
 }
