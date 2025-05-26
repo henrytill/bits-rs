@@ -15,60 +15,101 @@ pub fn parse_expr(input: &str) -> Result<Expr, String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_parse_const() {
-        assert_eq!(Expr::Const(42), parse_expr("42").unwrap());
+    macro_rules! parser_tests {
+        (
+            $(
+                $test_name:ident => {
+                    input: $input:expr,
+                    expected: $expected:expr
+                }
+            ),* $(,)?
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let actual = parse_expr($input).unwrap();
+                    assert_eq!($expected, actual);
+                }
+            )*
+        };
     }
 
-    #[test]
-    fn test_parse_var() {
-        assert_eq!(Expr::Var(String::from("x")), parse_expr("x").unwrap());
-    }
-
-    #[test]
-    fn test_parse_ops() {
-        let expected = Expr::add(Expr::Const(1), Expr::mul(Expr::Const(2), Expr::Const(3)));
-        let actual = parse_expr("1 + 2 * 3").unwrap();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_parse_precedence() {
-        let expected = Expr::add(Expr::mul(Expr::Const(1), Expr::Const(2)), Expr::Const(3));
-        let actual = parse_expr("1 * 2 + 3").unwrap();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_parse_sub_double_negation() {
-        let expected = Expr::sub(
-            Expr::Var(String::from("x")),
-            Expr::neg(Expr::neg(Expr::Var(String::from("x")))),
-        );
-        let actual = parse_expr("x - - - x").unwrap();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_parse_compound1() {
-        let expected = Expr::add(
-            Expr::mul(Expr::Const(2), Expr::Var(String::from("x"))),
-            Expr::Var(String::from("y")),
-        );
-        let actual = parse_expr("2 * x + y").unwrap();
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_parse_compound2() {
-        let expected = Expr::add(
-            Expr::mul(
-                Expr::add(Expr::mul(Expr::Const(0), Expr::Var(String::from("x"))), Expr::Const(1)),
-                Expr::Const(3),
-            ),
-            Expr::Const(12),
-        );
-        let actual = parse_expr("(0 * x + 1) * 3 + 12").unwrap();
-        assert_eq!(expected, actual);
+    parser_tests! {
+        test_parse_const => {
+            input: "42",
+            expected: Expr::Const(42)
+        },
+        test_parse_var => {
+            input: "x",
+            expected: Expr::Var(String::from("x"))
+        },
+        test_parse_ops => {
+            input: "1 + 2 * 3",
+            expected: Expr::add(Expr::Const(1), Expr::mul(Expr::Const(2), Expr::Const(3)))
+        },
+        test_parse_precedence => {
+            input: "1 * 2 + 3",
+            expected: Expr::add(Expr::mul(Expr::Const(1), Expr::Const(2)), Expr::Const(3))
+        },
+        test_parse_sub_double_negation => {
+            input: "x - - - x",
+            expected: Expr::sub(
+                Expr::Var(String::from("x")),
+                Expr::neg(Expr::neg(Expr::Var(String::from("x")))),
+            )
+        },
+        test_parse_compound1 => {
+            input: "2 * x + y",
+            expected: Expr::add(
+                Expr::mul(Expr::Const(2), Expr::Var(String::from("x"))),
+                Expr::Var(String::from("y")),
+            )
+        },
+        test_parse_compound2 => {
+            input: "(0 * x + 1) * 3 + 12",
+            expected: Expr::add(
+                Expr::mul(
+                    Expr::add(
+                        Expr::mul(Expr::Const(0), Expr::Var(String::from("x"))),
+                        Expr::Const(1),
+                    ),
+                    Expr::Const(3),
+                ),
+                Expr::Const(12),
+            )
+        },
+        test_parse_metavar => {
+            input: "$x",
+            expected: Expr::Metavar(String::from("x"))
+        },
+        test_parse_exp => {
+            input: "2 ^ 3",
+            expected: Expr::exp(Expr::Const(2), Expr::Const(3))
+        },
+        test_parse_exp_with_var => {
+            input: "x ^ 2",
+            expected: Expr::exp(Expr::Var(String::from("x")), Expr::Const(2))
+        },
+        test_parse_exp_with_negation => {
+            input: "-x ^ 2",
+            expected: Expr::exp(Expr::neg(Expr::Var(String::from("x"))), Expr::Const(2))
+        },
+        test_parse_exp_with_addition => {
+            input: "x + y ^ 2",
+            expected: Expr::add(
+                Expr::Var(String::from("x")),
+                Expr::exp(Expr::Var(String::from("y")), Expr::Const(2)),
+            )
+        },
+        test_parse_exp_with_mixed_ops => {
+            input: "x + y ^ 2 * z",
+            expected: Expr::add(
+                Expr::Var(String::from("x")),
+                Expr::mul(
+                    Expr::exp(Expr::Var(String::from("y")), Expr::Const(2)),
+                    Expr::Var(String::from("z")),
+                ),
+            )
+        },
     }
 }
