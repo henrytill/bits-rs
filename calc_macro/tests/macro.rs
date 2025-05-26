@@ -1,142 +1,125 @@
 use calc::parser;
 use calc_macro::calc;
 
-#[test]
-fn test_basic_expr() {
-    let expected = parser::parse_expr("2 * x + 1").unwrap();
-    let actual = calc!("2 * x + 1");
-    assert_eq!(expected, actual);
+macro_rules! calc_tests {
+    (
+        $(
+            $test_name:ident => {
+                input: $input:expr,
+                expected: $expected:expr
+            }
+        ),* $(,)?
+    ) => {
+        $(
+            #[test]
+            fn $test_name() {
+                let actual = parser::parse_expr($input).unwrap();
+                assert_eq!($expected, actual);
+            }
+        )*
+    };
 }
 
-#[test]
-fn test_antiquote() {
-    let expected = parser::parse_expr("2 * (y + z) + 1").unwrap();
-    let x = parser::parse_expr("y + z").unwrap();
-    let actual = calc!("2 * $x + 1");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_nested_antiquote() {
-    let expected = parser::parse_expr("2 * (y + z) + 1").unwrap();
-    let x = calc!("y + z");
-    let actual = calc!("2 * $x + 1");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_complex_expression() {
-    let expected = parser::parse_expr("2 * (x + 1) - 3 * (y - 4)").unwrap();
-    let actual = calc!("2 * (x + 1) - 3 * (y - 4)");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_deeply_nested_parens() {
-    let expected = parser::parse_expr("(((x + 1) * 2) + ((y - 3) * 4))").unwrap();
-    let actual = calc!("(((x + 1) * 2) + ((y - 3) * 4))");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_negation() {
-    let expected = parser::parse_expr("-x").unwrap();
-    let actual = calc!("-x");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_negation_with_parens() {
-    let expected = parser::parse_expr("-(x + y)").unwrap();
-    let actual = calc!("-(x + y)");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_double_negation() {
-    let expected = parser::parse_expr("--x").unwrap();
-    let actual = calc!("--x");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_exponentiation() {
-    let expected = parser::parse_expr("x ^ 2").unwrap();
-    let actual = calc!("x ^ 2");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_complex_exponentiation() {
-    let expected = parser::parse_expr("(x + 1) ^ (y - 2)").unwrap();
-    let actual = calc!("(x + 1) ^ (y - 2)");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_precedence() {
-    let expected = parser::parse_expr("x + y * z").unwrap();
-    let actual = calc!("x + y * z");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_exponentiation_precedence() {
-    let expected = parser::parse_expr("x * y ^ z").unwrap();
-    let actual = calc!("x * y ^ z");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_multiple_antiquotes() {
-    let expected = parser::parse_expr("(a + b) - (c * d)").unwrap();
-    let x = calc!("a + b");
-    let y = calc!("c * d");
-    let actual = calc!("$x - $y");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_complex_with_multiple_antiquotes() {
-    let expected = parser::parse_expr("((a + b) ^ 2) - ((c * d) + 3)").unwrap();
-    let x = calc!("a + b");
-    let y = calc!("c * d");
-    let actual = calc!("($x ^ 2) - ($y + 3)");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_single_constant() {
-    let expected = parser::parse_expr("42").unwrap();
-    let actual = calc!("42");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_single_variable() {
-    let expected = parser::parse_expr("variable").unwrap();
-    let actual = calc!("variable");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_single_antiquote() {
-    let expected = parser::parse_expr("x * y").unwrap();
-    let expr = calc!("x * y");
-    let actual = calc!("$expr");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_chained_operations() {
-    let expected = parser::parse_expr("a + b + c + d").unwrap();
-    let actual = calc!("a + b + c + d");
-    assert_eq!(expected, actual);
-}
-
-#[test]
-fn test_mixed_chained_operations() {
-    let expected = parser::parse_expr("a + b * c - d").unwrap();
-    let actual = calc!("a + b * c - d");
-    assert_eq!(expected, actual);
+calc_tests! {
+    test_basic => {
+        input: "2 * x + 1",
+        expected: calc!("2 * x + 1")
+    },
+    test_antiquote => {
+        input: "2 * (y + z) + 1",
+        expected: {
+            let x = parser::parse_expr("y + z").unwrap();
+            calc!("2 * $x + 1")
+        }
+    },
+    test_nested_antiquote => {
+        input: "2 * (y + z) + 1",
+        expected: {
+            let x = calc!("y + z");
+            calc!("2 * $x + 1")
+        }
+    },
+    test_complex_expression => {
+        input: "2 * (x + 1) - 3 * (y - 4)",
+        expected: calc!("2 * (x + 1) - 3 * (y - 4)")
+    },
+    test_deeply_nested_parens => {
+        input: "(((x + 1) * 2) + ((y - 3) * 4))",
+        expected: calc!("(((x + 1) * 2) + ((y - 3) * 4))")
+    },
+    test_negation => {
+        input: "-x",
+        expected: calc!("-x")
+    },
+    test_negation_with_parens => {
+        input: "-(x + y)",
+        expected: calc!("-(x + y)")
+    },
+    test_double_negation => {
+        input: "--x",
+        expected: calc!("--x")
+    },
+    test_exponentiation => {
+        input: "x ^ 2",
+        expected: calc!("x ^ 2")
+    },
+    test_complex_exponentiation => {
+        input: "(x + 1) ^ (y - 2)",
+        expected: calc!("(x + 1) ^ (y - 2)")
+    },
+    test_precedence => {
+        input: "x + y * z",
+        expected: calc!("x + y * z")
+    },
+    test_exponentiation_precedence => {
+        input: "x * y ^ z",
+        expected: calc!("x * y ^ z")
+    },
+    test_multiple_antiquotes => {
+        input: "(a + b) - (c * d)",
+        expected: {
+            let x = calc!("a + b");
+            let y = calc!("c * d");
+            calc!("$x - $y")
+        }
+    },
+    test_complex_with_multiple_antiquotes => {
+        input: "((a + b) ^ 2) - ((c * d) + 3)",
+        expected: {
+            let x = calc!("a + b");
+            let y = calc!("c * d");
+            calc!("($x ^ 2) - ($y + 3)")
+        }
+    },
+    test_single_constant => {
+        input: "42",
+        expected: calc!("42")
+    },
+    test_single_variable => {
+        input: "variable",
+        expected: calc!("variable")
+    },
+    test_single_antiquote => {
+        input: "x * y",
+        expected: {
+            let expr = calc!("x * y");
+            calc!("$expr")
+        }
+    },
+    test_chained_operations => {
+        input: "a + b + c + d",
+        expected: calc!("a + b + c + d")
+    },
+    test_mixed_chained_operations => {
+        input: "a + b * c - d",
+        expected: calc!("a + b * c - d")
+    },
+    test_subtraction_double_negation => {
+        input: "x - - - x",
+        expected: {
+            let x = parser::parse_expr("x").unwrap();
+            let y = x.clone();
+            calc!("$x - - - $y")
+        }
+    },
 }
