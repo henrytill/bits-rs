@@ -28,6 +28,10 @@ impl fmt::Display for Expr {
 }
 
 impl Expr {
+    pub fn var(s: impl Into<String>) -> Expr {
+        Expr::Var(s.into())
+    }
+
     pub fn neg(e: impl Into<Box<Expr>>) -> Expr {
         Expr::Neg(e.into())
     }
@@ -46,5 +50,9 @@ impl Expr {
 
     pub fn exp(a: impl Into<Box<Expr>>, b: impl Into<Box<Expr>>) -> Expr {
         Expr::Exp(a.into(), b.into())
+    }
+
+    pub fn metavar(s: impl Into<String>) -> Expr {
+        Expr::Metavar(s.into())
     }
 }

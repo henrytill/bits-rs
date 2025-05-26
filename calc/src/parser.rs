@@ -41,7 +41,7 @@ mod tests {
         },
         test_parse_var => {
             input: "x",
-            expected: Expr::Var(String::from("x"))
+            expected: Expr::var("x")
         },
         test_parse_ops => {
             input: "1 + 2 * 3",
@@ -54,15 +54,15 @@ mod tests {
         test_parse_sub_double_negation => {
             input: "x - - - x",
             expected: Expr::sub(
-                Expr::Var(String::from("x")),
-                Expr::neg(Expr::neg(Expr::Var(String::from("x")))),
+                Expr::var("x"),
+                Expr::neg(Expr::neg(Expr::var("x"))),
             )
         },
         test_parse_compound1 => {
             input: "2 * x + y",
             expected: Expr::add(
-                Expr::mul(Expr::Const(2), Expr::Var(String::from("x"))),
-                Expr::Var(String::from("y")),
+                Expr::mul(Expr::Const(2), Expr::var("x")),
+                Expr::var("y"),
             )
         },
         test_parse_compound2 => {
@@ -70,7 +70,7 @@ mod tests {
             expected: Expr::add(
                 Expr::mul(
                     Expr::add(
-                        Expr::mul(Expr::Const(0), Expr::Var(String::from("x"))),
+                        Expr::mul(Expr::Const(0), Expr::var("x")),
                         Expr::Const(1),
                     ),
                     Expr::Const(3),
@@ -80,7 +80,7 @@ mod tests {
         },
         test_parse_metavar => {
             input: "$x",
-            expected: Expr::Metavar(String::from("x"))
+            expected: Expr::metavar("x")
         },
         test_parse_exp => {
             input: "2 ^ 3",
@@ -88,26 +88,26 @@ mod tests {
         },
         test_parse_exp_with_var => {
             input: "x ^ 2",
-            expected: Expr::exp(Expr::Var(String::from("x")), Expr::Const(2))
+            expected: Expr::exp(Expr::var("x"), Expr::Const(2))
         },
         test_parse_exp_with_negation => {
             input: "-x ^ 2",
-            expected: Expr::exp(Expr::neg(Expr::Var(String::from("x"))), Expr::Const(2))
+            expected: Expr::exp(Expr::neg(Expr::var("x")), Expr::Const(2))
         },
         test_parse_exp_with_addition => {
             input: "x + y ^ 2",
             expected: Expr::add(
-                Expr::Var(String::from("x")),
-                Expr::exp(Expr::Var(String::from("y")), Expr::Const(2)),
+                Expr::var("x"),
+                Expr::exp(Expr::var("y"), Expr::Const(2)),
             )
         },
         test_parse_exp_with_mixed_ops => {
             input: "x + y ^ 2 * z",
             expected: Expr::add(
-                Expr::Var(String::from("x")),
+                Expr::var("x"),
                 Expr::mul(
-                    Expr::exp(Expr::Var(String::from("y")), Expr::Const(2)),
-                    Expr::Var(String::from("z")),
+                    Expr::exp(Expr::var("y"), Expr::Const(2)),
+                    Expr::var("z"),
                 ),
             )
         },
