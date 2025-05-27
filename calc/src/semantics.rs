@@ -14,7 +14,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::NegativePower => write!(f, "cannot raise to a negative power"),
-            Error::Metavar => write!(f, "metavariable"),
+            Error::Metavar => write!(f, "cannot simplify an expression containing a metavariable"),
         }
     }
 }
