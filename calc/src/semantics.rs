@@ -60,7 +60,8 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
                     let a_res = results.pop().unwrap();
                     simplify1(Expr::Neg(Box::new(a_res)))?
                 }
-                expr => simplify1(expr.clone())?,
+                leaf @ (Expr::Const(_) | Expr::Var(_)) => leaf.clone(),
+                Expr::Metavar(_) => return Err(Error::Metavar),
             };
             results.push(result);
         } else {
@@ -74,11 +75,10 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
                     stack.push(StackItem { expr: item.expr, visited: true });
                     stack.push(StackItem { expr: a.as_ref(), visited: false });
                 }
-                expr => {
-                    // For leaf nodes, just simplify directly
-                    let result = simplify1(expr.clone())?;
-                    results.push(result);
+                leaf @ (Expr::Const(_) | Expr::Var(_)) => {
+                    results.push(leaf.clone());
                 }
+                Expr::Metavar(_) => return Err(Error::Metavar),
             }
         }
     }
@@ -105,8 +105,8 @@ fn simplify1(expr: Expr) -> Result<Expr> {
         Expr::Mul(a, b) => simplify1::mul(*a, *b),
         Expr::Exp(a, b) => simplify1::exp(*a, *b),
         Expr::Neg(a) => simplify1::neg(*a),
+        leaf @ (Expr::Const(_) | Expr::Var(_)) => Ok(leaf),
         Expr::Metavar(_) => Err(Error::Metavar),
-        expr => Ok(expr),
     }
 }
 
