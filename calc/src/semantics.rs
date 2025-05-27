@@ -120,22 +120,18 @@ mod simplify1 {
         match (a, b) {
             (Expr::Const(0), x) | (x, Expr::Const(0)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m + n)),
-            // Handle (e - c1) + c2 when c1 == c2 -> e
             (Expr::Sub(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => {
                 return Ok(*e);
             }
-            // Handle c1 + (e - c2) when c1 == c2 -> e
             (Expr::Const(m), Expr::Sub(e, c)) if matches!(*c, Expr::Const(n) if n == m) => {
                 return Ok(*e);
             }
-            // Handle (e + c1) + c2 -> e + (c1 + c2)
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
                     return Ok(Expr::add(e, Expr::Const(n + m)));
                 }
                 Ok(Expr::add(Expr::Add(e, c), Expr::Const(m)))
             }
-            // Handle c1 + (e + c2) -> e + (c1 + c2)
             (Expr::Const(m), Expr::Add(e, c)) => {
                 if let Expr::Const(n) = *c {
                     return Ok(Expr::add(e, Expr::Const(m + n)));
@@ -152,15 +148,12 @@ mod simplify1 {
             (x, Expr::Const(0)) => Ok(x),
             (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
             (x, y) if x == y => Ok(Expr::Const(0)),
-            // Handle (e + c1) - c2 when c1 == c2 -> e
             (Expr::Add(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => {
                 return Ok(*e);
             }
-            // Handle c1 - (e + c2) when c1 == c2 -> -e
             (Expr::Const(m), Expr::Add(e, c)) if matches!(*c, Expr::Const(n) if n == m) => {
                 return Ok(Expr::neg(e));
             }
-            // Handle (e - c1) - c2 -> e - (c1 + c2)
             (Expr::Sub(e, c), Expr::Const(n)) => {
                 if let Expr::Const(m) = *c {
                     return Ok(Expr::sub(e, Expr::Const(m + n)));
