@@ -39,26 +39,26 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
                 Expr::Add(_, _) => {
                     let b_res = results.pop().unwrap();
                     let a_res = results.pop().unwrap();
-                    simplify1(Expr::Add(Box::new(a_res), Box::new(b_res)))?
+                    simplify1(Expr::add(a_res, b_res))?
                 }
                 Expr::Sub(_, _) => {
                     let b_res = results.pop().unwrap();
                     let a_res = results.pop().unwrap();
-                    simplify1(Expr::Sub(Box::new(a_res), Box::new(b_res)))?
+                    simplify1(Expr::sub(a_res, b_res))?
                 }
                 Expr::Mul(_, _) => {
                     let b_res = results.pop().unwrap();
                     let a_res = results.pop().unwrap();
-                    simplify1(Expr::Mul(Box::new(a_res), Box::new(b_res)))?
+                    simplify1(Expr::mul(a_res, b_res))?
                 }
                 Expr::Exp(_, _) => {
                     let b_res = results.pop().unwrap();
                     let a_res = results.pop().unwrap();
-                    simplify1(Expr::Exp(Box::new(a_res), Box::new(b_res)))?
+                    simplify1(Expr::exp(a_res, b_res))?
                 }
                 Expr::Neg(_) => {
                     let a_res = results.pop().unwrap();
-                    simplify1(Expr::Neg(Box::new(a_res)))?
+                    simplify1(Expr::neg(a_res))?
                 }
                 leaf @ (Expr::Const(_) | Expr::Var(_)) => leaf.clone(),
                 Expr::Metavar(_) => return Err(Error::Metavar),
