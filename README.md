@@ -1,5 +1,5 @@
-# bits-rust
+# bits-rs
 
-[![CI](https://github.com/henrytill/bits-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/henrytill/bits-rust/actions/workflows/ci.yml)
+[![CI](https://github.com/henrytill/bits-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/henrytill/bits-rs/actions/workflows/ci.yml)
 
 Some random bits of code.
