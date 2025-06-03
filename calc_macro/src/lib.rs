@@ -1,7 +1,7 @@
 mod convert;
 
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, LitStr};
+use syn::{LitStr, parse_macro_input};
 
 #[proc_macro]
 pub fn calc(input: TokenStream) -> TokenStream {
