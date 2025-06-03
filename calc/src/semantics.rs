@@ -27,14 +27,12 @@ struct StackItem<'a> {
     visited: bool,
 }
 
-// Simplify using post-order traversal
 pub fn simplify(expr: &Expr) -> Result<Expr> {
     let mut stack = vec![StackItem { expr, visited: false }];
     let mut results = Vec::new();
 
     while let Some(item) = stack.pop() {
         if item.visited {
-            // Process this node using already simplified children
             let result = match item.expr {
                 Expr::Add(_, _) => {
                     let b_res = results.pop().unwrap();
@@ -83,12 +81,10 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
         }
     }
 
-    // The final result should be the only item in the results vector
     assert_eq!(results.len(), 1);
 
     let mut result = results.pop().unwrap();
 
-    // Keep simplifying until we reach a fixed point
     loop {
         let simplified = simplify1(result.clone())?;
         if simplified == result {
@@ -220,13 +216,10 @@ mod tests {
             ("x + 1", "(x + 0) * (1 + (y - y)) + (z ^ 0)"),
             ("x + z", "(x + 0) * (1 + (y - y)) + (z ^ 1)"),
             ("x + 3", "((((x + 1) - 1) + 2) - 2) + 3"),
-            // Tests for c1 + (x - c2) -> x when c1 == c2
             ("x", "5 + (x - 5)"),
             ("y + 3", "7 + ((y + 3) - 7)"),
-            // Tests for c1 - (x + c2) -> -x when c1 == c2
             ("-z", "4 - (z + 4)"),
             ("-(a * b)", "10 - ((a * b) + 10)"),
-            // More complex nested cases
             ("x", "3 + ((x - 1) - 2)"),
             ("-y", "5 - ((3 + (y + 2)))"),
             ("x * (y + z)", "x * (y + (z * (2 - 1))) + (0 * w)"),

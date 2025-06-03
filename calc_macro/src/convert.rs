@@ -15,7 +15,6 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
 
     while let Some(item) = stack.pop() {
         if item.visited {
-            // Process node after children have been processed
             let result = match item.expr {
                 Expr::Neg(_) => {
                     let a = results.pop().unwrap();
@@ -51,12 +50,10 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
                         calc::syntax::Expr::Exp(Box::new(#a), Box::new(#b))
                     }
                 }
-                // These cases are handled directly when not visited
                 _ => panic!("We shouldn't be here"),
             };
             results.push(result);
         } else {
-            // Process node on first encounter
             match item.expr {
                 Expr::Neg(a) => {
                     stack.push(StackItem { expr: item.expr, visited: true });
@@ -85,7 +82,6 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
         }
     }
 
-    // The final result should be the only item in the results vector
     assert_eq!(results.len(), 1);
 
     results.pop().unwrap()
