@@ -82,7 +82,8 @@ pub fn expr_to_syntax(expr: &Expr) -> TokenStream {
         }
     }
 
-    assert_eq!(results.len(), 1);
-
-    results.pop().unwrap()
+    {
+        assert_eq!(results.len(), 1);
+        results.pop().unwrap()
+    }
 }

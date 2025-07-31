@@ -81,9 +81,10 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
         }
     }
 
-    assert_eq!(results.len(), 1);
-
-    let mut result = results.pop().unwrap();
+    let mut result = {
+        assert_eq!(results.len(), 1);
+        results.pop().unwrap()
+    };
 
     loop {
         let simplified = simplify1(result.clone())?;
