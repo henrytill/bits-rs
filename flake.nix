@@ -20,10 +20,7 @@
           cargoLock = {
             lockFile = ./Cargo.lock;
           };
-          src = builtins.path {
-            path = ./.;
-            name = "bits-src";
-          };
+          src = self;
         };
       overlay = final: prev: {
         bits = mkBits final;
