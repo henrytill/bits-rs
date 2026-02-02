@@ -1,6 +1,15 @@
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Op {
+    Neg,
+    Add,
+    Sub,
+    Mul,
+    Exp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Var(String),
     Const(i32),
@@ -54,5 +63,16 @@ impl Expr {
 
     pub fn metavar(s: impl Into<String>) -> Expr {
         Expr::Metavar(s.into())
+    }
+
+    pub fn op(&self) -> Option<Op> {
+        match self {
+            Expr::Neg(..) => Some(Op::Neg),
+            Expr::Add(..) => Some(Op::Add),
+            Expr::Sub(..) => Some(Op::Sub),
+            Expr::Mul(..) => Some(Op::Mul),
+            Expr::Exp(..) => Some(Op::Exp),
+            _ => None,
+        }
     }
 }

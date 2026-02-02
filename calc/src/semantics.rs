@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::syntax::Expr;
+use crate::syntax::{Expr, Op};
 
 #[derive(Debug)]
 pub enum Error {
@@ -21,63 +21,51 @@ impl fmt::Display for Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct StackItem<'a> {
-    expr: &'a Expr,
-    visited: bool,
+enum StackItem<'a> {
+    Visit(&'a Expr),
+    Eval(Op),
 }
 
 pub fn simplify(expr: &Expr) -> Result<Expr> {
-    let mut stack = vec![StackItem { expr, visited: false }];
+    let mut stack = vec![StackItem::Visit(expr)];
     let mut results = Vec::new();
 
     while let Some(item) = stack.pop() {
-        if item.visited {
-            let result = match item.expr {
-                Expr::Add(_, _) => {
-                    let b_res = results.pop().unwrap();
-                    let a_res = results.pop().unwrap();
-                    simplify1(Expr::add(a_res, b_res))?
-                }
-                Expr::Sub(_, _) => {
-                    let b_res = results.pop().unwrap();
-                    let a_res = results.pop().unwrap();
-                    simplify1(Expr::sub(a_res, b_res))?
-                }
-                Expr::Mul(_, _) => {
-                    let b_res = results.pop().unwrap();
-                    let a_res = results.pop().unwrap();
-                    simplify1(Expr::mul(a_res, b_res))?
-                }
-                Expr::Exp(_, _) => {
-                    let b_res = results.pop().unwrap();
-                    let a_res = results.pop().unwrap();
-                    simplify1(Expr::exp(a_res, b_res))?
-                }
-                Expr::Neg(_) => {
-                    let a_res = results.pop().unwrap();
-                    simplify1(Expr::neg(a_res))?
-                }
-                leaf @ (Expr::Const(_) | Expr::Var(_)) => leaf.clone(),
-                Expr::Metavar(_) => return Err(Error::Metavar),
-            };
-            results.push(result);
-        } else {
-            match item.expr {
-                Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
-                    stack.push(StackItem { expr: item.expr, visited: true });
-                    stack.push(StackItem { expr: b.as_ref(), visited: false });
-                    stack.push(StackItem { expr: a.as_ref(), visited: false });
-                }
-                Expr::Neg(a) => {
-                    stack.push(StackItem { expr: item.expr, visited: true });
-                    stack.push(StackItem { expr: a.as_ref(), visited: false });
-                }
-                leaf @ (Expr::Const(_) | Expr::Var(_)) => {
+        match item {
+            StackItem::Eval(op) => {
+                let result = if matches!(op, Op::Neg) {
+                    let a = results.pop().unwrap();
+                    simplify1(Expr::neg(a))?
+                } else {
+                    let b = results.pop().unwrap();
+                    let a = results.pop().unwrap();
+                    let expr = match op {
+                        Op::Add => Expr::add(a, b),
+                        Op::Sub => Expr::sub(a, b),
+                        Op::Mul => Expr::mul(a, b),
+                        Op::Exp => Expr::exp(a, b),
+                        Op::Neg => unreachable!(),
+                    };
+                    simplify1(expr)?
+                };
+                results.push(result);
+            }
+            StackItem::Visit(expr) => match expr {
+                leaf @ (Expr::Var(_) | Expr::Const(_)) => {
                     results.push(leaf.clone());
                 }
+                Expr::Neg(a) => {
+                    stack.push(StackItem::Eval(Op::Neg));
+                    stack.push(StackItem::Visit(a));
+                }
+                Expr::Add(a, b) | Expr::Sub(a, b) | Expr::Mul(a, b) | Expr::Exp(a, b) => {
+                    let Some(op) = expr.op() else { unreachable!() };
+                    stack.push(StackItem::Eval(op));
+                    stack.push(StackItem::Visit(b));
+                    stack.push(StackItem::Visit(a));
+                }
                 Expr::Metavar(_) => return Err(Error::Metavar),
-            }
+            },
         }
     }
 
