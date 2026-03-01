@@ -85,11 +85,11 @@ pub fn simplify(expr: &Expr) -> Result<Expr> {
 
 fn simplify1(expr: Expr) -> Result<Expr> {
     match expr {
-        Expr::Add(a, b) => simplify1::add(*a, *b),
-        Expr::Sub(a, b) => simplify1::sub(*a, *b),
-        Expr::Mul(a, b) => simplify1::mul(*a, *b),
+        Expr::Add(a, b) => Ok(simplify1::add(*a, *b)),
+        Expr::Sub(a, b) => Ok(simplify1::sub(*a, *b)),
+        Expr::Mul(a, b) => Ok(simplify1::mul(*a, *b)),
         Expr::Exp(a, b) => simplify1::exp(*a, *b),
-        Expr::Neg(a) => simplify1::neg(*a),
+        Expr::Neg(a) => Ok(simplify1::neg(*a)),
         leaf @ (Expr::Const(_) | Expr::Var(_)) => Ok(leaf),
         Expr::Metavar(_) => Err(Error::Metavar),
     }
@@ -101,55 +101,58 @@ mod simplify1 {
     use super::{Error, Result};
 
     #[inline]
-    pub fn add(a: Expr, b: Expr) -> Result<Expr> {
+    pub fn add(a: Expr, b: Expr) -> Expr {
         match (a, b) {
-            (Expr::Const(0), x) | (x, Expr::Const(0)) => Ok(x),
-            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m + n)),
-            (Expr::Sub(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => Ok(*e),
-            (Expr::Const(m), Expr::Sub(e, c)) if matches!(*c, Expr::Const(n) if n == m) => Ok(*e),
+            (Expr::Const(0), x) | (x, Expr::Const(0)) => x,
+            (Expr::Const(m), Expr::Const(n)) => Expr::Const(m + n),
+            (Expr::Sub(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => *e,
+            (Expr::Const(m), Expr::Sub(e, c)) if matches!(*c, Expr::Const(n) if n == m) => *e,
             (Expr::Add(e, c), Expr::Const(m)) => {
                 if let Expr::Const(n) = *c {
-                    return Ok(Expr::add(e, Expr::Const(n + m)));
+                    Expr::add(e, Expr::Const(n + m))
+                } else {
+                    Expr::add(Expr::Add(e, c), Expr::Const(m))
                 }
-                Ok(Expr::add(Expr::Add(e, c), Expr::Const(m)))
             }
             (Expr::Const(m), Expr::Add(e, c)) => {
                 if let Expr::Const(n) = *c {
-                    return Ok(Expr::add(e, Expr::Const(m + n)));
+                    Expr::add(e, Expr::Const(m + n))
+                } else {
+                    Expr::add(Expr::Const(m), Expr::Add(e, c))
                 }
-                Ok(Expr::add(Expr::Const(m), Expr::Add(e, c)))
             }
-            (a, b) => Ok(Expr::add(a, b)),
+            (a, b) => Expr::add(a, b),
         }
     }
 
     #[inline]
-    pub fn sub(a: Expr, b: Expr) -> Result<Expr> {
+    pub fn sub(a: Expr, b: Expr) -> Expr {
         match (a, b) {
-            (x, Expr::Const(0)) => Ok(x),
-            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m - n)),
-            (x, y) if x == y => Ok(Expr::Const(0)),
-            (Expr::Add(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => Ok(*e),
+            (x, Expr::Const(0)) => x,
+            (Expr::Const(m), Expr::Const(n)) => Expr::Const(m - n),
+            (x, y) if x == y => Expr::Const(0),
+            (Expr::Add(e, c), Expr::Const(m)) if matches!(*c, Expr::Const(n) if n == m) => *e,
             (Expr::Const(m), Expr::Add(e, c)) if matches!(*c, Expr::Const(n) if n == m) => {
-                Ok(Expr::neg(e))
+                Expr::neg(e)
             }
             (Expr::Sub(e, c), Expr::Const(n)) => {
                 if let Expr::Const(m) = *c {
-                    return Ok(Expr::sub(e, Expr::Const(m + n)));
+                    Expr::sub(e, Expr::Const(m + n))
+                } else {
+                    Expr::sub(Expr::Sub(e, c), Expr::Const(n))
                 }
-                Ok(Expr::sub(Expr::Sub(e, c), Expr::Const(n)))
             }
-            (a, b) => Ok(Expr::sub(a, b)),
+            (a, b) => Expr::sub(a, b),
         }
     }
 
     #[inline]
-    pub fn mul(a: Expr, b: Expr) -> Result<Expr> {
+    pub fn mul(a: Expr, b: Expr) -> Expr {
         match (a, b) {
-            (Expr::Const(0), _) | (_, Expr::Const(0)) => Ok(Expr::Const(0)),
-            (Expr::Const(1), x) | (x, Expr::Const(1)) => Ok(x),
-            (Expr::Const(m), Expr::Const(n)) => Ok(Expr::Const(m * n)),
-            (a, b) => Ok(Expr::mul(a, b)),
+            (Expr::Const(0), _) | (_, Expr::Const(0)) => Expr::Const(0),
+            (Expr::Const(1), x) | (x, Expr::Const(1)) => x,
+            (Expr::Const(m), Expr::Const(n)) => Expr::Const(m * n),
+            (a, b) => Expr::mul(a, b),
         }
     }
 
@@ -167,11 +170,11 @@ mod simplify1 {
     }
 
     #[inline]
-    pub fn neg(a: Expr) -> Result<Expr> {
+    pub fn neg(a: Expr) -> Expr {
         match a {
-            Expr::Neg(x) => Ok(*x),
-            Expr::Const(m) => Ok(Expr::Const(-m)),
-            a => Ok(Expr::neg(a)),
+            Expr::Neg(x) => *x,
+            Expr::Const(m) => Expr::Const(-m),
+            a => Expr::neg(a),
         }
     }
 }
